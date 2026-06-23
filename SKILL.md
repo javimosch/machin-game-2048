@@ -40,7 +40,7 @@ raylib is immediate-mode and polls input via functions, so no opaque handles or 
 
 - **One slide routine, four directions.** `lane_index(dir, lane, pos)` maps direction + lane + travel-position → flat board index; `move_lane` then compacts non-zeros, merges each equal pair once, and pads. No four-way copy-paste.
 - **Mutate a slice in place across calls.** `move_lane`/`spawn`/`reset` take the `board` slice and write `board[i] = …`; the writes hit the shared backing array, so the caller sees them. They return only *summaries* (gained, moved, ok).
-- **No `str(bool)`.** machin's `str` is numeric only — stringifying a bool is a type error. Keep bools in control flow (`if moved { … }`), never `str(moved)`.
+- **`str(bool)` is fine** (machin v0.42.0+): `str(true)` → `"true"`. On older compilers `str` was numeric-only, so keep bools in control flow if you must target those.
 - **Random without a PRNG builtin.** `rand_bytes(2)` then `% len(empties)` picks a cell; a second byte `< 26` gives the ~10% chance of a 4.
 - **Center text.** `MeasureText(s, fs)` then `x + (CELL - tw)/2`; shrink the font as the number widens so 4-digit tiles still fit.
 
