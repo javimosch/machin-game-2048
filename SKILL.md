@@ -7,6 +7,8 @@ description: Build, run, and modify machin-game-2048 — the 2048 puzzle as a na
 
 The 2048 sliding-puzzle as a real native desktop window, written in [machin](https://github.com/javimosch/machin) (MFL) and rendered with [raylib](https://www.raylib.com/) over machin's C FFI. It is the reference example for **GUI / graphics** programs in machin (the terminal counterpart is [machin-game-snake](https://github.com/javimosch/machin-game-snake)).
 
+> The shared game-dev setup, build-and-verify workflow, and the cross-cutting caveats/gotchas (esp. the `int`/`float` rule) live in the canonical **[machin-gamedev skill](https://github.com/javimosch/machin/blob/main/skills/machin-gamedev/SKILL.md)**. This file is 2048's specifics.
+
 ## Build & run
 
 ```bash
