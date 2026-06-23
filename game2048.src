@@ -1,0 +1,254 @@
+// machin-game-2048 — the 2048 sliding-puzzle as a real native desktop app,
+// written in machin (MFL) and drawn with raylib through machin's C FFI. A real
+// OpenGL window: arrow keys (or WASD) slide the tiles, equal tiles merge, a new
+// 2 or 4 spawns each move, R restarts, Esc quits.
+//
+//   ./build.sh && ./machin-game-2048
+//
+// The game logic is pure MFL over a flat []int board; only the rendering and
+// input crosses the FFI into raylib (scalars + one by-value Color struct — the
+// same surface the examples/gui menu uses). Build needs raylib + a display; it
+// is a GUI binary, not a no-dependency one.
+
+extern "raylib" {
+    header "raylib.h"
+    link "raylib" link "GL" link "m" link "pthread" link "dl" link "rt" link "X11"
+    cstruct Color { r u8 g u8 b u8 a u8 }
+    fn InitWindow(i32, i32, string)
+    fn SetTargetFPS(i32)
+    fn WindowShouldClose() bool
+    fn BeginDrawing()
+    fn EndDrawing()
+    fn ClearBackground(Color)
+    fn DrawText(string, i32, i32, i32, Color)
+    fn DrawRectangle(i32, i32, i32, i32, Color)
+    fn MeasureText(string, i32) i32
+    fn IsKeyPressed(i32) bool
+    fn CloseWindow()
+}
+
+// ---- layout (window 500x600; a 4x4 board of 100px tiles under a header) ----
+
+func WIN_W() (n) { n = 500 }
+func WIN_H() (n) { n = 600 }
+func BX() (n) { n = 20 }
+func BY() (n) { n = 120 }
+func GAP() (n) { n = 12 }
+func CELL() (n) { n = 100 }
+func cell_x(c) (x) { x = BX() + GAP() + c * (CELL() + GAP()) }
+func cell_y(r) (y) { y = BY() + GAP() + r * (CELL() + GAP()) }
+
+func col(r, g, b) (c) { c = Color{r, g, b, 255} }
+func col_a(r, g, b, a) (c) { c = Color{r, g, b, a} }
+
+// ---- palette: the classic 2048 tile colors, keyed by value ----
+
+func tile_color(v) (c) {
+    c = col(205, 193, 180)
+    if v == 2 { c = col(238, 228, 218) }
+    if v == 4 { c = col(237, 224, 200) }
+    if v == 8 { c = col(242, 177, 121) }
+    if v == 16 { c = col(245, 149, 99) }
+    if v == 32 { c = col(246, 124, 95) }
+    if v == 64 { c = col(246, 94, 59) }
+    if v == 128 { c = col(237, 207, 114) }
+    if v == 256 { c = col(237, 204, 97) }
+    if v == 512 { c = col(237, 200, 80) }
+    if v == 1024 { c = col(237, 197, 63) }
+    if v >= 2048 { c = col(237, 194, 46) }
+}
+
+func text_color(v) (c) {
+    c = col(249, 246, 242)
+    if v <= 4 { c = col(119, 110, 101) }
+}
+
+// smaller font as the number gets wider, so it always fits the tile
+func font_for(s) (n) {
+    n = 46
+    d := len(s)
+    if d == 3 { n = 36 }
+    if d >= 4 { n = 28 }
+}
+
+// ---- board mechanics (pure MFL; validated headless) ----
+
+// lane_index maps (direction, lane, travel-position) to a flat board index, so
+// one slide routine handles all four directions. pos 0 is furthest in the move
+// direction. dir: 0 left, 1 right, 2 up, 3 down.
+func lane_index(dir, lane, pos) (i) {
+    if dir == 0 { i = lane * 4 + pos }
+    if dir == 1 { i = lane * 4 + (3 - pos) }
+    if dir == 2 { i = pos * 4 + lane }
+    if dir == 3 { i = (3 - pos) * 4 + lane }
+}
+
+// move_lane slides one lane toward pos 0, merging each equal pair once. It
+// mutates the shared board slice in place and reports score gained + whether
+// anything moved.
+func move_lane(board, dir, lane) (gained, moved) {
+    gained = 0
+    moved = false
+    i0 := lane_index(dir, lane, 0)
+    i1 := lane_index(dir, lane, 1)
+    i2 := lane_index(dir, lane, 2)
+    i3 := lane_index(dir, lane, 3)
+    a := []int{}
+    if board[i0] != 0 { a = append(a, board[i0]) }
+    if board[i1] != 0 { a = append(a, board[i1]) }
+    if board[i2] != 0 { a = append(a, board[i2]) }
+    if board[i3] != 0 { a = append(a, board[i3]) }
+    out := []int{}
+    k := 0
+    while k < len(a) {
+        if k + 1 < len(a) && a[k] == a[k + 1] {
+            m := a[k] * 2
+            out = append(out, m)
+            gained = gained + m
+            k = k + 2
+        } else {
+            out = append(out, a[k])
+            k = k + 1
+        }
+    }
+    while len(out) < 4 { out = append(out, 0) }
+    if board[i0] != out[0] { moved = true }
+    if board[i1] != out[1] { moved = true }
+    if board[i2] != out[2] { moved = true }
+    if board[i3] != out[3] { moved = true }
+    board[i0] = out[0]
+    board[i1] = out[1]
+    board[i2] = out[2]
+    board[i3] = out[3]
+}
+
+func do_move(board, dir) (moved, gained) {
+    moved = false
+    gained = 0
+    l := 0
+    while l < 4 {
+        g, mv := move_lane(board, dir, l)
+        gained = gained + g
+        if mv { moved = true }
+        l = l + 1
+    }
+}
+
+// spawn drops a 2 (90%) or 4 (10%) on a random empty cell; ok=false if full.
+func spawn(board) (ok) {
+    empties := []int{}
+    i := 0
+    while i < 16 {
+        if board[i] == 0 { empties = append(empties, i) }
+        i = i + 1
+    }
+    ok = len(empties) > 0
+    if ok {
+        r := rand_bytes(2)
+        pick := empties[byte_at(r, 0) % len(empties)]
+        val := 2
+        if byte_at(r, 1) < 26 { val = 4 }
+        board[pick] = val
+    }
+}
+
+// has_moves reports whether any slide is still possible (empty cell or a mergeable neighbor).
+func has_moves(board) (b) {
+    b = false
+    i := 0
+    while i < 16 {
+        if board[i] == 0 { b = true }
+        r := i / 4
+        c := i % 4
+        if c < 3 { if board[i] == board[i + 1] { b = true } }
+        if r < 3 { if board[i] == board[i + 4] { b = true } }
+        i = i + 1
+    }
+}
+
+func reset(board) {
+    i := 0
+    while i < 16 { board[i] = 0  i = i + 1 }
+    spawn(board)
+    spawn(board)
+}
+
+// ---- rendering ----
+
+func draw_board(board, score, over) {
+    ClearBackground(col(250, 248, 239))
+    DrawText("2048", BX(), 34, 60, col(119, 110, 101))
+    DrawText("score " + str(score), 270, 60, 28, col(119, 110, 101))
+    DrawRectangle(BX(), BY(), 460, 460, col(187, 173, 160))
+
+    i := 0
+    while i < 16 {
+        r := i / 4
+        c := i % 4
+        v := board[i]
+        x := cell_x(c)
+        y := cell_y(r)
+        DrawRectangle(x, y, CELL(), CELL(), tile_color(v))
+        if v != 0 {
+            s := str(v)
+            fs := font_for(s)
+            tw := MeasureText(s, fs)
+            DrawText(s, x + (CELL() - tw) / 2, y + (CELL() - fs) / 2, fs, text_color(v))
+        }
+        i = i + 1
+    }
+
+    if over {
+        DrawRectangle(0, 0, WIN_W(), WIN_H(), col_a(250, 248, 239, 180))
+        msg := "Game Over"
+        mw := MeasureText(msg, 48)
+        DrawText(msg, (WIN_W() - mw) / 2, 250, 48, col(119, 110, 101))
+        hint := "press R to restart"
+        hw := MeasureText(hint, 24)
+        DrawText(hint, (WIN_W() - hw) / 2, 320, 24, col(119, 110, 101))
+    }
+}
+
+// ---- main loop ----
+
+func main() {
+    InitWindow(WIN_W(), WIN_H(), "machin - 2048")
+    SetTargetFPS(60)
+
+    board := []int{}
+    i := 0
+    while i < 16 { board = append(board, 0)  i = i + 1 }
+    spawn(board)
+    spawn(board)
+    score := 0
+    over := false
+
+    while WindowShouldClose() == false {
+        if over == false {
+            dir := -1
+            if IsKeyPressed(263) || IsKeyPressed(65) { dir = 0 }
+            if IsKeyPressed(262) || IsKeyPressed(68) { dir = 1 }
+            if IsKeyPressed(265) || IsKeyPressed(87) { dir = 2 }
+            if IsKeyPressed(264) || IsKeyPressed(83) { dir = 3 }
+            if dir >= 0 {
+                moved, g := do_move(board, dir)
+                if moved {
+                    score = score + g
+                    spawn(board)
+                    if has_moves(board) == false { over = true }
+                }
+            }
+        }
+        if IsKeyPressed(82) {
+            reset(board)
+            score = 0
+            over = false
+        }
+
+        BeginDrawing()
+        draw_board(board, score, over)
+        EndDrawing()
+    }
+
+    CloseWindow()
+}
