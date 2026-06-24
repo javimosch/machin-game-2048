@@ -1,19 +1,19 @@
 ---
-name: machin-game-2048
-description: Build, run, and modify machin-game-2048 — the 2048 puzzle as a native raylib desktop app written in machin (MFL). Use when working on this repo, or as a worked example of driving a GUI / graphics library from machin through the C FFI (window, rectangles, text, keyboard).
+name: machin-game-demo-2048
+description: Build, run, and modify machin-game-demo-2048 — the 2048 puzzle as a native raylib desktop app written in machin (MFL). Use when working on this repo, or as a worked example of driving a GUI / graphics library from machin through the C FFI (window, rectangles, text, keyboard).
 ---
 
-# machin-game-2048
+# machin-game-demo-2048
 
-The 2048 sliding-puzzle as a real native desktop window, written in [machin](https://github.com/javimosch/machin) (MFL) and rendered with [raylib](https://www.raylib.com/) over machin's C FFI. It is the reference example for **GUI / graphics** programs in machin (the terminal counterpart is [machin-game-snake](https://github.com/javimosch/machin-game-snake)).
+The 2048 sliding-puzzle as a real native desktop window, written in [machin](https://github.com/javimosch/machin) (MFL) and rendered with [raylib](https://www.raylib.com/) over machin's C FFI. It is the reference example for **GUI / graphics** programs in machin (the terminal counterpart is [machin-game-demo-snake](https://github.com/javimosch/machin-game-demo-snake)).
 
 > The shared game-dev setup, build-and-verify workflow, and the cross-cutting caveats/gotchas (esp. the `int`/`float` rule) live in the canonical **[machin-gamedev skill](https://github.com/javimosch/machin/blob/main/skills/machin-gamedev/SKILL.md)**. This file is 2048's specifics.
 
 ## Build & run
 
 ```bash
-./build.sh                 # machin encode game2048.src -> game2048.mfl, then machin build -> ./machin-game-2048
-./machin-game-2048
+./build.sh                 # machin encode game2048.src -> game2048.mfl, then machin build -> ./machin-game-demo-2048
+./machin-game-demo-2048
 ```
 
 Needs `machin`, a C compiler, **raylib**, and a display.

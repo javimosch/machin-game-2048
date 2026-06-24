@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build machin-game-2048. Uses a system raylib if one is installed; otherwise
+# Build machin-game-demo-2048. Uses a system raylib if one is installed; otherwise
 # fetches raylib's prebuilt *static* release into vendor/ (no root needed) and
 # links that. The committed source stays system-style; the vendored path is
 # injected into a throwaway copy so game2048.src is never rewritten.
@@ -36,5 +36,5 @@ else
     mv "$tmp" game2048.mfl
 fi
 
-"$MACHIN" build game2048.mfl -o machin-game-2048
-echo "built ./machin-game-2048"
+"$MACHIN" build game2048.mfl -o machin-game-demo-2048
+echo "built ./machin-game-demo-2048"

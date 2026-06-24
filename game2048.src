@@ -1,9 +1,9 @@
-// machin-game-2048 — the 2048 sliding-puzzle as a real native desktop app,
+// machin-game-demo-2048 — the 2048 sliding-puzzle as a real native desktop app,
 // written in machin (MFL) and drawn with raylib through machin's C FFI. A real
 // OpenGL window: arrow keys (or WASD) slide the tiles, equal tiles merge, a new
 // 2 or 4 spawns each move, R restarts, Esc quits.
 //
-//   ./build.sh && ./machin-game-2048
+//   ./build.sh && ./machin-game-demo-2048
 //
 // The game logic is pure MFL over a flat []int board; only the rendering and
 // input crosses the FFI into raylib (scalars + one by-value Color struct — the

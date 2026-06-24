@@ -1,4 +1,4 @@
-# machin-game-2048
+# machin-game-demo-2048
 
 The **2048** sliding-puzzle as a real **native desktop app** — written in **[machin](https://github.com/javimosch/machin)** (MFL) and drawn with [raylib](https://www.raylib.com/) through machin's C FFI. A real OpenGL window, not a terminal UI: arrow keys (or WASD) slide the tiles, equal tiles merge, a new `2` or `4` spawns each move, the score climbs, **R** restarts, **Esc** quits.
 
@@ -23,15 +23,15 @@ Part of [**awesome-machin**](https://github.com/javimosch/awesome-machin) — th
 
 ## Why it exists
 
-The machin north star is "build real things." Two of the ecosystem's games stress different ends of the language: [machin-game-snake](https://github.com/javimosch/machin-game-snake) drove the terminal-input builtins; this one goes the *other* way — a **GUI desktop app** — to exercise machin's **C FFI** on a second real graphics program. The whole game logic is pure MFL over a flat `[]int` board; only rendering and input cross into raylib (scalars + one by-value `Color` struct — the same FFI surface as the [examples/gui menu](https://github.com/javimosch/machin/tree/main/examples/gui)). It composes what's there rather than adding a builtin — the FFI was already enough to drive a real graphics library.
+The machin north star is "build real things." Two of the ecosystem's games stress different ends of the language: [machin-game-demo-snake](https://github.com/javimosch/machin-game-demo-snake) drove the terminal-input builtins; this one goes the *other* way — a **GUI desktop app** — to exercise machin's **C FFI** on a second real graphics program. The whole game logic is pure MFL over a flat `[]int` board; only rendering and input cross into raylib (scalars + one by-value `Color` struct — the same FFI surface as the [examples/gui menu](https://github.com/javimosch/machin/tree/main/examples/gui)). It composes what's there rather than adding a builtin — the FFI was already enough to drive a real graphics library.
 
 ## Build
 
 Needs the `machin` compiler, a C compiler, **raylib**, and a display (X11/desktop). A GUI binary links the system graphics stack (`libGL`/`libX11`), so — unlike machin's headless tools — it is **not** a no-dependency binary.
 
 ```bash
-./build.sh            # → ./machin-game-2048
-./machin-game-2048
+./build.sh            # → ./machin-game-demo-2048
+./machin-game-demo-2048
 ```
 
 `build.sh` uses a **system raylib** if one is installed (`sudo apt-get install libraylib-dev`, `brew install raylib`, …). If not, it **vendors raylib's prebuilt static release** into `vendor/` automatically — no root required — and links that. Override the compiler with `MACHIN=/path/to/machin ./build.sh`.
